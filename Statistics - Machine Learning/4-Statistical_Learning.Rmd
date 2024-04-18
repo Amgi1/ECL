@@ -1,0 +1,289 @@
+---
+title: "BE3_partie1"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Exercice 1
+
+## Question 1
+
+```{r}
+library(DiceEval)
+library(car)
+library(MASS)
+
+bitume_train = read.table("bitume.train.txt", header = T)
+bitume_test = read.table("bitume.test.txt", header = T)
+
+head(bitume_train)
+```
+
+## Question 2
+
+```{r}
+matplot(t(bitume_train[, -1]), type='l', col=1:35, xlab='Longueur d\'onde', ylab='Absorbance', main='Spectres d\'apprentissage')
+
+hist(bitume_train$PENE, main='Histogramme des pénétrabilités (échantillon d\'apprentissage)', xlab='Pénétrabilité', ylab='Fréquence', col='blue')
+```
+
+## Question 3
+
+```{r}
+ matplot(t(bitume_test[, -1]), type='l', col=1:9, xlab='Longueur d\'onde', ylab='Absorbance', main='Spectres de test')
+
+hist(bitume_test$PENE, main='Histogramme des pénétrabilités (échantillon de test)', xlab='Pénétrabilité', ylab='Fréquence', col='blue')
+```
+
+## Question BONUS
+
+```{r}
+k <- 2  # Nombre de clusters
+cluster <- kmeans(bitume_train[, -1], centers = k)
+
+plot(cluster$cluster, bitume_train$PENE, 
+     xlab = "Numéro de classe", ylab = "Pénétrabilité",
+     main = "Pénétrabilités en fonction du numéro de classe")
+```
+
+Il semble y avoir un lien entre la pénétrabilité et les clusters, avec une classe admettant une pénétrabilité autour de 2 et l'autre autour de 1.4, ce qui respecte la distribution visible sur l'histogramme des pénétrabilités.
+
+## Question 4
+
+```{r}
+library(pls)
+#PCR
+bitume.pcr <- pcr(PENE ~ ., data = bitume_train, ncomp=30)
+
+#tracer des premières fonctions propres 
+p = ncol(bitume_train)
+par(mfrow =c(1,1))
+plot(1:(p-1),bitume.pcr$loadings[1:(p-1),1],type ="l",col = 1,ylim =c(-0.01,0.01))
+points(1:(p-1),bitume.pcr$loadings[1:(p-1),1],col = 1)
+for (i in 2:4) 
+{
+  points(1:(p-1),bitume.pcr$loadings[1:(p-1),i],col = i)
+  lines(1:(p-1),bitume.pcr$loadings[1:(p-1),i],col = i)
+}
+```
+
+```{r}
+bitume.cv <- crossval(bitume.pcr, segments=10)
+plot(MSEP(bitume.cv))
+```
+
+On fixera donc ncomp à 10 pour le modèle PCR.
+
+```{r}
+#PLS
+bitume.pls <- plsr(PENE ~ ., data = bitume_train, ncomp=30)
+
+par(mfrow =c(1,1))
+plot(1:(p-1),bitume.pls$loadings[1:(p-1),1],type ="l",col = 1,ylim =c(-0.01,0.01))
+points(1:(p-1),bitume.pls$loadings[1:(p-1),1],col = 1)
+for (i in 2:4) 
+{
+  points(1:(p-1),bitume.pls$loadings[1:(p-1),i],col = i)
+  lines(1:(p-1),bitume.pls$loadings[1:(p-1),i],col = i)
+}
+```
+
+```{r}
+ bitume.cv2 <- crossval(bitume.pls, segments=10) 
+ plot(MSEP(bitume.cv2))
+```
+
+On fixera donc ncomp à 8 pour le modèle PLS.
+
+```{r}
+#--------------------------------------------------------------
+# lasso
+#--------------------------------------------------------------
+library(lars)
+y = as.matrix(bitume_train[,1])
+x = as.matrix(bitume_train[,-1])
+
+mod_lasso =lars(x, y, type = "lasso")
+```
+
+```{r}
+Y_PCR = predict(bitume.pcr, newdata = bitume_test, ncomp = 10, type = "response")
+RMSE_pcr = RMSE(bitume_test[,1], Y_PCR)
+
+Y_PLS = predict(bitume.pls, newdata = bitume_test, ncomp = 8, type = "response")
+RMSE_pls = RMSE(bitume_test[,1], Y_PLS)
+
+newx = as.matrix(bitume_test[,-1])
+value = 0.5
+
+fits <- predict.lars(mod_lasso, newx, s=value, mode="fraction", type="fit")
+RMSE_lasso = RMSE(bitume_test[,1], unlist(fits)[-c(1:3)])
+
+c(RMSE_pcr,RMSE_pls,RMSE_lasso)
+```
+
+La méthode PLS donne les meilleurs résultats sur la base de données de test.
+
+## Question 5
+
+```{r}
+plot(bitume_test[,1], Y_PCR, 
+     xlab = "Pénétrabilités Observées (Apprentissage)", 
+     ylab = "Pénétrabilités Prédites (Apprentissage)",
+     main = "Modèle PCR (test))")
+abline(0, 1, col = "red") # Ajoute une ligne de référence pour montrer la relation parfaite
+
+plot(bitume_test[,1], Y_PLS, 
+     xlab = "Pénétrabilités Observées (Apprentissage)", 
+     ylab = "Pénétrabilités Prédites (Apprentissage)",
+     main = "Modèle PLS (test)")
+abline(0, 1, col = "red") 
+
+plot(bitume_test[,1],  unlist(fits)[-c(1:3)], 
+     xlab = "Pénétrabilités Observées (Apprentissage)", 
+     ylab = "Pénétrabilités Prédites (Apprentissage)",
+     main = "Modèle Lasso (test)")
+abline(0, 1, col = "red") 
+
+```
+
+# Exercice 2
+
+## Question 1
+
+```{r}
+Carseats <- read.table("Carseats.txt", sep="",header=T)
+
+proportion_apprentissage <- 0.7
+set.seed(123)
+indices_apprentissage <- sample(1:nrow(Carseats), size = round(proportion_apprentissage * nrow(Carseats)))
+
+ensemble_apprentissage <- Carseats[indices_apprentissage, ]
+ensemble_test <- Carseats[-indices_apprentissage, ]
+```
+
+------------------------------------------------------------------------
+
+## Question 2
+
+## Modèle CART
+
+```{r}
+#install.packages("rpart")
+library(rpart)
+
+modele_cart <- rpart(Sales ~ ., data = ensemble_apprentissage)
+plot(modele_cart)
+text(modele_cart)
+```
+
+Avantages : - Facile à comprendre et à interpréter. - Ne nécessite pas beaucoup de prétraitement des données. - Peut capturer des relations non linéaires. Inconvénients : - Tendance à l'overfitting (surapprentissage). - Sensible aux données d'entrée (pettes variations peuvent conduire à des arbres différents).
+
+## Modèle Random Forest
+
+```{r}
+#install.packages("randomForest")
+library(randomForest)
+modele_rf <- randomForest(Sales ~ ., data = ensemble_apprentissage)
+```
+
+Avantages :
+
+-   Robuste aux valeurs aberrantes et aux overfitting.
+-   Gère naturellement les variables continues et catégoriques.
+-   Peut fournir une estimation de l'importance des variables.
+
+Inconvénients :
+
+-   Moins interprétable que les arbres de décision individuels.
+-   Le temps de calcul peut être élevé pour de grands ensembles de données.
+
+## Modèle Bagging
+
+```{r}
+#install.packages("ipred")
+library(ipred)
+modele_bagging <- bagging(Sales ~ ., data = ensemble_apprentissage)
+```
+
+Avantages :
+
+-   Réduit la variance en moyennant plusieurs modèles.
+-   Peut améliorer les performances des modèles instables.
+
+Inconvénients :
+
+-   Ne peut pas améliorer les performances si le modèle de base est déjà très performant.
+-   Les modèles individuels doivent être diversifiés pour que le bagging soit efficace.
+
+## Modèle Boosting
+
+```{r}
+#install.packages("gbm")
+library(gbm)
+ensemble_apprentissage$ShelveLoc <- as.factor(ensemble_apprentissage$ShelveLoc)
+ensemble_apprentissage$Urban <- as.factor(ensemble_apprentissage$Urban)
+ensemble_apprentissage$US <- as.factor(ensemble_apprentissage$US)
+modele_boosting <- gbm(Sales ~ ., data = ensemble_apprentissage, distribution = "gaussian", n.trees = 500, interaction.depth = 4)
+
+```
+
+Avantages :
+
+-   Peut améliorer les performances des modèles faibles.
+-   Gère bien les données bruyantes.
+
+Inconvénients :
+
+-   Sensible aux valeurs aberrantes.
+-   Plus lent à entraîner que les modèles CART.
+
+## Illustration sur les données Carseats
+
+```{r}
+# Prédictions sur l'ensemble de test pour chaque modèle
+predictions_cart <- predict(modele_cart, newdata = ensemble_test)
+predictions_rf <- predict(modele_rf, newdata = ensemble_test)
+predictions_bagging <- predict(modele_bagging, newdata = ensemble_test)
+predictions_boosting <- predict(modele_boosting, newdata = ensemble_test)
+
+# Calcul des métriques d'évaluation (RMSE) pour chaque modèle
+rmse_cart <- sqrt(mean((predictions_cart - ensemble_test$Sales)^2))
+rmse_rf <- sqrt(mean((predictions_rf - ensemble_test$Sales)^2))
+rmse_bagging <- sqrt(mean((predictions_bagging - ensemble_test$Sales)^2))
+rmse_boosting <- sqrt(mean((predictions_boosting - ensemble_test$Sales)^2))
+
+# Afficher les résultats
+cat("RMSE pour CART:", rmse_cart, "\n")
+cat("RMSE pour RF:", rmse_rf, "\n")
+cat("RMSE pour Bagging:", rmse_bagging, "\n")
+cat("RMSE pour Boosting:", rmse_boosting, "\n")
+
+```
+
+## Question 3
+
+Le modèle qui semble avoir la meilleure performance sur l'ensemble test (RMSE le plus faible) est donc le Bagging.
+
+## Question 4
+
+On commence par construire le modèle. Puis on élimine les variables non significatives par itération en fonction des résultats des tests d'influence : on évalue à chaque itération la performance du nouveau modèle et on répète le processus jusqu'à ce que toutes les variables restantes soient significatives.
+
+Voici le code R pour une sélection backward basée sur le critère AIC :
+
+```{r}
+# Construction du modèle
+modele_initial <- lm(Sales ~ ., data = ensemble_apprentissage)
+
+# Construction du nouveau modèle
+modele_backward <- step(modele_initial, direction = "backward")
+
+# Affichage du modèle final
+summary(modele_backward)
+
+```

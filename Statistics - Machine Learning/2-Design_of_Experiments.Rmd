@@ -1,0 +1,75 @@
+---
+title: "Rendu BE2 Statistique appliquée aux sciences de l'ingénieur"
+output: html_notebook
+---
+
+
+### 1
+
+Les paramètres sont :
+- r le taux sans risque qui varie entre 2% et 7%
+- $\sigma _1$ la volatilité de l'actif 1 qui varie entre 0.1 et 0.4
+- $\sigma _2$ la volatilité de l'actif 2 qui varie entre 0.1 et 0.4
+- $\rho$ la corrélation entre les 2 actifs qui varie entre 0.2 et 0.9
+- T l'horizon d'échange qui peut prendre les valeurs 6 mois ou 5 ans.
+
+
+### 2
+
+Pour un plan d’expériences qui permette d’étudier la sensibilité aux paramètres et à toutes leurs interactions avec le moins d’essais possible, nous prendrons un plan d'expérience de résolution V. Comme on a 5 facteurs, nous prendrons un plan d'expérience de type $2^{5-1}$. On le construit à partir d'un plan complet $2^4$ et en sélectionnant la clé E=ABCD pour la $5^e$ colonne.
+
+```{r}
+plan_experience <- read.delim("~/ECL/ECL S9/Statistiques appliquees/BE2/plan_experience_prix.txt")
+x<- as.matrix(plan_experience)
+x
+```
+
+### 3
+
+```{r}
+source('PX_exo1_finance.R')
+xx=rescale(x)
+prix = numeric(16)
+
+for (i in 1:16){
+  prix[i] <- simu_rendement(xx[i,1],xx[i,2],xx[i,3],xx[i,4],xx[i,5])
+}
+```
+
+```{r}
+table <- data.frame(x, prix)
+table
+```
+
+
+### 4
+
+```{r}
+lm <- lm(prix~., data=table)
+summary(lm)
+```
+Le modèle n'est pas excellent. Le $r^2$ est plutôt faible, mais la p-value est acceptable (<5%).
+
+Les paramètres les plus influents sur le prix sont T et vol2.
+
+La fonction summary nous retourne une residual standard error $\sigma = 0.157$.
+
+```{r}
+stdError = sqrt(0.157^2 * solve(t(x) %*% x))
+stdError
+```
+On retrouve donc bien les valeurs de la colonne Std. Error du summary.
+
+
+On crée un modèle ajusté à l'aide du critère AIC.
+
+```{r}
+slm_AIC <- step(lm,direction= "backward",k = 2)
+coef(slm_AIC)
+```
+
+L'équation du modèle ajusté est (en approximant les coefficients à 2 chiffres significatifs):
+$prix = 0.21 + 0.13*T - 0.049*rho + 0.12*vol2$.
+
+Pour notre modèle, une augmentation de 0.15 sur vol2 entraine une augmentation du prix de $0.15*0.12=0.018$.
+Pour notre modèle, une diminution de 1 sur T entraine une diminution du prix de $0.13*1=0.13$.

@@ -1,0 +1,58 @@
+---
+title: "BE2 Regression Logistique"
+output: html_notebook
+---
+
+### 1
+```{r}
+meexpV2 <- read.table("~/ECL/ECL S9/Statistiques appliquees/BE2/BE2 sujet2 partie 2 régression logistique-20231129/meexpV2.txt", header=TRUE)
+```
+ On peut tout de suite éliminer l'ID car cette variable est de toute évidence sans influence.
+```{r}
+meexpV2$ID = as.factor(meexpV2$ID)
+meexpV2$Exp = as.factor(meexpV2$Exp)
+meexpV2$Sympt = as.factor(meexpV2$Sympt)
+meexpV2$Hist = as.factor(meexpV2$Hist)
+meexpV2$Check = as.factor(meexpV2$Check)
+
+mod_logit = glm(Y~(Exp + Sympt + Hist + Check), family=binomial(link="logit"),data=meexpV2)
+summary(mod_logit)
+```
+
+En étudiant les p-value retournées par le summary, on peut déterminer que les variables importantes sont Exp et Sympt.
+
+### 2
+Pour la variable Exp:
+- Exp=1 (date de la dernière mammographie il y a moins d'un an) : Cette variable est très influente sur la probabilité de de déceler un nouveau cas de cancer, avec une très forte probabilité d'avoir Y=1 si Exp=1.
+- Exp=2 (date de la dernière mammographie il y a plus d'un an) : De même la probabilité augmente si Exp=2, mais de façon beaucoup plus modérée.
+- Exp=0 (jamais eu de mammographie): La probabilité de trouver Y=1 baisse de façon significative.
+
+Pour la variable Sympt:
+En étudiant la variable Sympt, on constate qu'une personne qui n'est pas d'accord avec la proposition "Vous n’avez pas besoin d’une mammographie sauf en cas d’apparition de symptômes" a une probabilité plus élevée d'avoir une mammographie qui décèle un nouveau cancer. Un avis extrême sur la question augmente encore plus cette probabilité.
+
+
+### 3
+On regarde la matrice de confusion pour juger le modèle.
+```{r}
+table(mod_logit$fitted.values>0.5, meexpV2$Y)
+```
+Le modèle admet un taux de réussite de 75%, avec un biais vers les false positives. Le modèle est acceptable.
+
+### 4
+On peut faire un modèle contenant des intéractions, puis l'ajuster en utilisant le critère AIC avec une méthode backward.
+
+```{r}
+mod_logit_2 = glm(Y~(Exp + Sympt + Hist + Check)^2, family=binomial(link="logit"),data=meexpV2)
+backward <- step(mod_logit,method = "backward",k= 2)
+backward$anova
+Anova(backward,test.statistic="LR",type = "III")
+```
+On obtient la matrice de confusion suivante:
+
+```{r}
+table(backward$fitted.values>0.5, meexpV2$Y)
+
+```
+Le modèle obtenu n'est pas meilleur malgré un taux de réussite de 73%. Ce modèle se résoud
+
+

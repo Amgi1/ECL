@@ -1,0 +1,106 @@
+---
+title: "BE1: Regression linéaire"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 6)
+```
+
+
+##Exercice 1:
+
+###1.  
+
+```{r}
+ph = read.table(file = "ph.txt", header = TRUE, sep="\t", dec=",")
+lm1 = lm(pHcalc_insitu~days, data = ph)
+```
+
+Le modèle lm1 est un modèle de régression linéaire de pHcalc_insitu en fonction de days.
+
+a)  
+
+```{r}
+plot(pHcalc_insitu~days, data = ph)
+abline(lm1$coefficients, col = 'red')
+```
+
+b)  Le pourcentage de variance expliquée par cette régression est mesuré par $R^2$.
+
+```{r}
+summary(lm1)
+```
+
+On obtient $R^2=0.5499$.
+
+c)  On définit l'hypothèse $H_0$: $\beta_1 = 0$, et $H_1$: $\beta_1 \neq 0$. La statistique du test est la variable aléatoire $$T=\sqrt{\frac{SSR}{SSE/(n-2)}}$$ avec $n=308$. 
+$T$ suit une loi de student de n-2 degrés de liberté sous l'hypothèse $H_0$.
+
+Or on voit dans l'output de la question b) que la p-value\<2e-16\<0.05, donc on rejette l'hypothèse $H_0$. On a donc $\beta_1 \neq 0$ et on peut valider le modèle.
+
+###2)  
+```{r}
+nouvel_individu = data.frame(days = 19000)
+prediction_IC = data.frame(predict(lm1, newdata = nouvel_individu, interval = 'confidence', level = 0.95))
+prediction_IC
+```
+Avec ce modèle, on peut prévoir un pH de 8.023 en 2050, avec pour intervalle de confiance à 95% [8.016103, 8.029829].
+
+###3)
+```{r}
+prediction_IP = data.frame(predict(lm1, newdata = nouvel_individu, interval = 'prediction', level = 0.95))
+prediction_IP
+```
+On calcule pour intervalle de prédiction à 95% [7.995358, 8.050575]. Le pH en 2050 pourra donc être observé en dessous de 8.
+
+###4)
+```{r}
+plot(lm1)
+```
+
+###5)
+Pour savoir si l'océan se réchauffe, on peut étudier le modèle de régression linéaire de la température on fonction du temps.
+
+```{r}
+lm2 = lm(temp~days, data = ph)
+plot(temp~days, data = ph)
+abline(lm2$coefficients, col = 'red')
+```
+Il paraît ainsi que la température ait une tendance croissante. Toutefois, avant d'arriver à une conclusion, il faut d'abord valider le modèle.
+
+On effectue le test de student comme à la question 1.c). La statistique du test est $T=$
+
+```{r}
+summary(lm2)
+```
+
+On observe que la p-value est de 0.0682 > 0.05. On conserve donc $H_0$. Ainsi on ne peut pas valider le modèle, et on ne peut donc pas juger sur la croissance de la température des océans. 
+
+
+
+Nous savons en revanche que le pH est décroissant avec le temps. Etudions donc le modèle de régression linéaire de la température en fonction du pH.
+
+
+```{r}
+lm3 = lm(temp~pHcalc_insitu, data = ph)
+plot(temp~pHcalc_insitu, data = ph)
+abline(lm3$coefficients, col = 'red')
+```
+On observe à première vue que la température décroit lorsque le pH augmente. 
+
+On effectue un test de Student pour valider le modèle.
+```{r}
+summary(lm3)
+```
+La p-value<2e-16<0.05, on peut donc valider le modèle.
+Ainsi on peut déduire que la température de l'océan est croissante avec le pH, donc on peut supposer que l'océan se réchauffe.
+Toutefois, on observe $R^2$ est très faible, donc le modèle n'explique que 30% de la variance dans les données. On ne peut donc pas supposer que le modèle est représentatif.
+
+Ainsi on ne peut conclure si l'océan se réchauffe.
+
+
+
+
