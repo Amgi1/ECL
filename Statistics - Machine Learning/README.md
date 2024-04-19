@@ -4,7 +4,7 @@
 
 This folder contains a series of Machine Learning exercises completed using R.
 
-This was done as part of the course "MOD 2.3: Statistical Engineering". The markdown elements of the notebooks are written in French. Due to the way these notebooks were imported, there may be issues regarding file paths when importing.
+This was done as part of the course *MOD 2.3: Statistical Engineering*. The markdown elements of the notebooks are written in French. Due to the way these notebooks were imported, there may be issues regarding file paths when importing.
 
 ### 1- Linear Regression
 
@@ -71,6 +71,23 @@ Develop a predictive model to estimate the penetration of bitumen based on its i
     - Select the number of principal components using cross-validation
 - Employ the plsr function from the pls package to fit a PLS model
     - Determine the optimal number of latent variables using cross-validation
-- 
+- Use the lars package to fit a Lasso regression model
+
+
+- Compare the predictive performance of the 3 models on the test set with RMSE
 
 #### Part 2: CART, RF, Bagging, Boosting
+
+**Objective**
+
+Analyze the factors influencing baby car seat sales across 400 stores using various ensemble learning methods.
+Compare the performance of CART (Classification and Regression Trees), Random Forest, Bagging, and Boosting algorithms.
+
+**Methodology**
+
+- Implement a CART model using the rpart package
+- Build a Random Forest model using the randomForest package
+- Implement a bagging algorithm using the ipred package
+- Build a boosting model using the gbm package
+- Evaluate the models using RMSE to compare accuracy
+- Implement a backward stepwise selection procedure for a linear regression model.
